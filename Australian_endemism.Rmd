@@ -1,11 +1,21 @@
 
 title: Quantifying Australia’s Plant Endemicity Using Global Datasets. 
-
 author: Stephanie Woolley (z5284998)
 
-Package Installation:
-```{r}
+#Quantifying Australia's Plant Endemicity Using Global Datasets 
+
+The 4 main aims of this research were to: 
+1. Quantify how many plant species are endemic?
+2. What is the extinction risk status of endemic and non-endemic species?
+3. How do the growth forms differ between endemic and non-endemic species?
+4. What is the connection and distribution of non-endemic natives across the rest of the world?
+
+
+##IntialPackage Installation:
+the following packages are needed:
+```{r include=FALSE}
 #package installation 
+#devtools::install_github("wcornwell/taxonlookup")
 #remotes::install_github("traitecoevo/austraits", build_vignettes = FALSE)
 #install.packages("treemap")
 #install.packages("AUstraits")
@@ -14,6 +24,7 @@ Package Installation:
 #install.packages("rnaturalearth")
 #install.packages("rnaturalearthdata")
 #install.packages("ggplot2")
+#install.packages("tidyverse")
 library(austraits) 
 library(dplyr)
 library(treemap)
@@ -21,31 +32,18 @@ library("RColorBrewer")
 library(ggplot2)
 library(rnaturalearth)
 library(rnaturalearthdata)
+library(tidyverse)
+library(taxonlookup)
 ```
 
-1. Initial data set collection :
-```{r}
-apc <- read_csv("data/apc_native_only_mesaglio_6jun.csv")
-apc$countries_present <- NA
+##1. Initial data set collection:
+Data manipulation was done by our supervisor W. Cornwell and uploaded as a complete Australian Native data frame with the exception of the joining of the invasive species data frames which is shown below.
 
-for (i in 1:10) {
-  key <-
-    name_suggest(q = apc$canonicalName[i], rank = 'species')$data$key[1]
-  first_species <- occ_search(taxonKey = key, limit = 100000)
-  unique_countries <- unique(first_species$data$country)
-  apc$countries_present[i] <- paste(unique_countries, collapse = "_")
-}
-
-write_csv(apc,"intermediate_data/natives_with_counties_added.csv")
-```
-further data manipulation was done by our supervisor Will Cornwell and uploaded as a complete Australian Native data frame for us to use for our analysis. 
-
-
-1.1Combining Invasive species data sets:
+##1.1Combining Invasive species data sets:
 
 US alien invasive flora:
-```{r}
-gris_us <- read.csv("intermediate_data/gris_us_data.csv")
+```{r include=FALSE}
+gris_us <- read.csv("https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/intermediate_data/gris_us_data.csv")
 
 us_alien <- select(gris_us, scientificName, isInvasive, establishmentMeans)
 
@@ -56,79 +54,84 @@ us_inv_rename <- rename(us_inv, species = scientificName, for_USA = isInvasive)
 
 write.csv(us_inv_rename, "intermediate_data/US_invasive_method_1.csv")
 ```
-
-iNaturalist invasive:
-
-```{r}
-natives_wc<- read.csv("intermediate_data/natives_with_counties_added.csv")
-ausinv <- read.csv("data/aus_invasives_elsewhere.csv")
+##iNaturalist invasive:
+```{r include=FALSE}
+natives_wc<- read.csv("https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/intermediate_data/natives_with_counties_added.csv")
+ausinv <- read.csv("https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/data/aus_invasives_elsewhere.csv")
 
 ausinv <- select(ausinv, -group)
 ausinv <- rename(ausinv, 'canonicalName' = species)
 
 join_na_ausinv <- left_join(natives_wc, ausinv, by = "canonicalName")
-
-write.csv(join_na_ausinv,"intermediate_data/natives_with_invasives_method2.csv")
+ write.csv("natives_with_invasives_method2.csv")
 
 ```
 
-Glonaf invasive:
-```{r}
-glonaf <- read.csv("~/Desktop/Taxon_x_List_GloNAF_vanKleunenetal2018Ecology.csv")
-method_2="https://raw.githubusercontent.com/traitecoevo/australian_plant_endemism/master/intermediate_data/natives_with_invasives_method2.csv"
+##Glonaf invasive:
+```{r include=FALSE}
+glonaf <- read.csv("https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/data/Taxon_x_List_GloNAF_vanKleunenetal2018Ecology.csv")
+method_2="https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/intermediate_data/natives_with_invasives_method2.csv"
 method_2<-read_csv(url(method_2))
 glonaf <- rename(glonaf, 'canonicalName' = taxon_orig)
 join_glonaf_method2 <-left_join(method_2, glonaf, by = "canonicalName")
 write.csv("join_glonaf_method2.csv")
 ```
 
+the invaisve species data sets were then used to create a subset dataframe called country_dataset.csv, this was then used for all the following data manipulation and visualisations.
 
-
-2.1 Assessing Endemism: 
+##2.1 Assessing Endemism: 
 ```{r}
-countries <- read_csv("intermediate_data/country_dataset.csv")
+#import data 
+countries <- read.csv("intermediate_data/country_dataset.csv")
+
+#number of endemic species
+countries%>% 
+  group_by(aus_endemic) %>% 
+  summarise(endemic_subset=n())
+```
+
+joining with taxon lookup to get group counts:
+```{r}
 countries$genus <- word(countries$species,1,1)
-
-Pollia <- filter(countries, genus == "Pollia")
-
-countries %>%
-  group_by(genus) %>%
-  summarize(genus_endemic = all(aus_endemic),
-            prop_sp_endemic = sum(aus_endemic)/n()) -> genera
-
-genera %>%
-  ggplot(aes(x=prop_sp_endemic))+geom_histogram()
-
-devtools::install_github("wcornwell/taxonlookup")
-
-library(taxonlookup)
-lt <- lookup_table(genera$genus, by_species = TRUE)
-
-genera %>%
-  left_join(lt) -> genus_with_family
-
-genus_with_family %>%
-  group_by(family) %>%
-  summarize(prop_endemic = sum(genus_endemic)/n(),n()) -> family_summary
-
-family_summary %>%
-  ggplot(aes(x=prop_endemic)) + geom_histogram()
 
 lt <- lookup_table(countries$species, by_species = TRUE)
 lt <- rownames_to_column(lt, "species")
 
-left_join(countries, lt) -> species_with_family
+native_species_wgroups <- left_join(countries, lt) 
 
-species_with_family %>%
+native_species_wgroups %>%
   group_by(group) %>%
   summarize(prop_endemic = sum(aus_endemic)/n(), n=n())
 
+subset <- select(native_species_wgroups, species, group, aus_endemic)
+```
+
+endemic groups number of species:
+```{r}
+endemic_subset <- subset %>% 
+  group_by(group) %>% 
+  filter(aus_endemic == "TRUE")
+
+endemic_subset%>% 
+  group_by(group) %>% 
+  summarise(endemic_subset=n())
+```
+
+non-endemic groups number of species:
+```{r}
+nonendemic_subset <- subset %>% 
+  group_by(group) %>% 
+  filter(aus_endemic == "FALSE")
+
+nonendemic_subset%>% 
+  group_by(group) %>% 
+  summarise(nonendemic_subset=n())
 ```
 
 
 
-2.2 Joining IUCN plots:
-
+##2.2 Joining IUCN plots:
+the following code was used to join IUCN data:
 ```{r}
 country <- read.csv("intermediate_data/country_dataset.csv")
 
@@ -141,7 +144,10 @@ ICUN_subset <- select(ICUN, species, redlistCategory)
 joined_data <- left_join(country, ICUN_subset, by = "species")
 
 subset <- select(joined_data, species, redlistCategory, aus_endemic)
+```
 
+endemic IUCN status:
+```{r}
 #endemic
 endemic_subset <- subset %>%
   group_by(aus_endemic) %>% 
@@ -150,8 +156,11 @@ endemic_subset <- subset %>%
 endemic_subset %>% 
   group_by(redlistCategory) %>% 
   summarise(endemic_subset=n())
+```
 
 
+non-endemic IUCN status:
+```{r}
 #nonendemic 
 nonendemic_subset <- subset %>%
   group_by(aus_endemic) %>% 
@@ -164,7 +173,10 @@ nonendemic_subset <- subset %>%
 
 
 
-2.3 Joining Growth form data and creating growth form plots:
+
+##2.3 Joining Growth form data and creating growth form plots:
+
+creating growth form dataset:
 ```{r}
 #austraits growth form data set 
 austraits <- load_austraits(version = "3.0.2", path = "intermediate_data/austraits")
@@ -181,8 +193,8 @@ growth_form <- growth_form_subset %>%
 
 #Endemic and non-endemic treemap process 
 #load endemic dataset 
-country <- read.csv("intermediate_data/country_dataset.csv")
-
+country <- read.csv("https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/intermediate_data/country_dataset.csv")
+ 
 #rename taxon to match name_use 
 growth_form <- rename(growth_form, 'species' = taxon_name)
 
@@ -234,17 +246,18 @@ complete_group <- join_data %>%
                          "epiphyte_herb" = "epiphyte"
   ))
 
-#check the grouping values 
-unique(complete_group$group)
-
 #select only necessary info
 complete_group <- select(complete_group, species, value, aus_endemic, group)
+```
 
+
+
+Creating endemic growth form tree map from dataframe:
+```{r}
 #subset so only endemic
 endemic_group <- complete_group %>%
   group_by(aus_endemic) %>% 
   filter(aus_endemic == "TRUE")
-
 #endemic treemap of large groups data 
 endemic_group_counts <- endemic_group %>% 
   group_by(group) %>% 
@@ -254,9 +267,12 @@ treemap(endemic_group_counts,
         index= "group",
         vSize="num_species",
         type="index", 
-        palette = "Set3") 
+        palette = "Set3", 
+        title = "Endemic Growth Forms") 
+```
 
-#nonendemic
+Creating non-endemic growth form treemap from dataframe:
+```{r}
 #subset so nonendemic
 nonendemic_group <- complete_group %>%
   group_by(aus_endemic) %>% 
@@ -271,17 +287,23 @@ treemap(nonendemic_group_counts,
         index= "group",
         vSize="num_species",
         type="index", 
-        palette = "Set3") 
-
+        palette = "Set3",
+        title = "Non-endemic Growth Forms") 
 ```
 
 
+##2.4 Creating Geographical Visulisations:
+The following code was used to build geographical map of Australia's native species
 
-2.4 Creating Geographical Visulisations:
 ```{r}
-country_count_basic = "https://raw.githubusercontent.com/traitecoevo/australian_plant_endemism/master/intermediate_data/country_counts.csv"
+country_dataset<-"https://raw.githubusercontent.com/traitecoevo/australian_plant_endemism/6e12021f3604d0ad20bc5c44c9c9e08c9cf1a668/intermediate_data/country_dataset.csv"
+country_dataset<-read.csv(url(country_dataset))
+
+
+
+country_count_basic <- "https://raw.githubusercontent.com/traitecoevo/australian_plant_endemism/master/intermediate_data/country_counts.csv"
 country_count_basic<-read_csv(url(country_count_basic))
-View(country_count_basic)
+
 
 country_count_basic$name<-gsub("_"," ",country_count_basic$Country)
 country_count_basic$name<-str_to_title(country_count_basic$name)
@@ -294,13 +316,10 @@ cc<-left_join(country_count,country_count_basic)
 View(cc)
 
 ggplot(data = cc) +
-  geom_sf(aes(fill = `sum(presence)`),size=0.1)
-ggplot(data = cc) +
   geom_sf(aes(fill = `sum(presence)`),size=0.1) +
   scale_fill_viridis_c(option = "plasma")
-country_count_basic["26", "name"] <- "Guinea"
-
 ```
+
 
 
 
