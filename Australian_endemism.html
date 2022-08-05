@@ -391,32 +391,15 @@ the rest of the world?</p>
 #install.packages(&quot;rnaturalearthdata&quot;)
 #install.packages(&quot;ggplot2&quot;)
 #install.packages(&quot;tidyverse&quot;)
-library(austraits) </code></pre>
-<pre><code>## Loading required package: RefManageR</code></pre>
-<pre><code>## Thanks for showing interest in `austraits`! Please consider citing this package - citation(&#39;austraits&#39;)</code></pre>
-<pre class="r"><code>library(dplyr)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;dplyr&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:stats&#39;:
-## 
-##     filter, lag</code></pre>
-<pre><code>## The following objects are masked from &#39;package:base&#39;:
-## 
-##     intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>library(treemap)
+library(austraits) 
+library(dplyr)
+library(treemap)
 library(&quot;RColorBrewer&quot;)
 library(ggplot2)
 library(rnaturalearth)
 library(rnaturalearthdata)
-library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
-<pre><code>## ✔ tibble  3.1.6     ✔ purrr   0.3.4
-## ✔ tidyr   1.2.0     ✔ stringr 1.4.0
-## ✔ readr   2.1.2     ✔ forcats 0.5.1</code></pre>
-<pre><code>## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ dplyr::filter() masks stats::filter()
-## ✖ dplyr::lag()    masks stats::lag()</code></pre>
-<pre class="r"><code>library(taxonlookup)</code></pre>
+library(tidyverse)
+library(taxonlookup)</code></pre>
 </div>
 <div id="initial-data-set" class="section level2">
 <h2>1. Initial data set:</h2>
@@ -449,16 +432,8 @@ join_na_ausinv &lt;- left_join(natives_wc, ausinv, by = &quot;canonicalName&quot
 <p><strong>Glonaf invasive:</strong></p>
 <pre class="r"><code>glonaf &lt;- read.csv(&quot;https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/data/Taxon_x_List_GloNAF_vanKleunenetal2018Ecology.csv&quot;)
 method_2=&quot;https://raw.githubusercontent.com/stephwoolley/australian_plant_endemism/master/intermediate_data/natives_with_invasives_method2.csv&quot;
-method_2&lt;-read_csv(url(method_2))</code></pre>
-<pre><code>## New names:
-## Rows: 21068 Columns: 5
-## ── Column specification
-## ──────────────────────────────────────────────────────── Delimiter: &quot;,&quot; chr
-## (4): species, canonicalName, countries_present, link.to.obs dbl (1): ...1
-## ℹ Use `spec()` to retrieve the full column specification for this data. ℹ
-## Specify the column types or set `show_col_types = FALSE` to quiet this message.
-## • `` -&gt; `...1`</code></pre>
-<pre class="r"><code>glonaf &lt;- rename(glonaf, &#39;canonicalName&#39; = taxon_orig)
+method_2&lt;-read_csv(url(method_2))
+glonaf &lt;- rename(glonaf, &#39;canonicalName&#39; = taxon_orig)
 join_glonaf_method2 &lt;-left_join(method_2, glonaf, by = &quot;canonicalName&quot;)
 write.csv(&quot;join_glonaf_method2.csv&quot;)</code></pre>
 <pre><code>## &quot;&quot;,&quot;x&quot;
