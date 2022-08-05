@@ -1,7 +1,7 @@
 
 title: Quantifying Australia’s Plant Endemicity Using Global Datasets. 
 
-author: Stephanie Woolley z5284998
+author: Stephanie Woolley (z5284998)
 
 Package Installation:
 ```{r}
